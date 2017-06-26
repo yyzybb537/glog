@@ -850,8 +850,8 @@ func (sb *syncBuffer) rotateFile(now time.Time) error {
 	n, err := sb.file.Write(buf.Bytes())
 	sb.nbytes += uint64(n)
 
-	// Redirect stderr to errlog.
-	if sb.sev == fatalLog {
+	// If run as daemon, redirect the stderr to errlog.
+	if ppid == 1 && sb.sev == fatalLog {
 		err = syscall.Dup2(int(sb.file.Fd()), int(os.Stderr.Fd()))
 	}
 	return err

@@ -49,6 +49,7 @@ func createLogDirs() {
 
 var (
 	pid      = os.Getpid()
+	ppid     = os.Getppid()
 	program  = filepath.Base(os.Args[0])
 	host     = "unknownhost"
 	userName = "unknownuser"
