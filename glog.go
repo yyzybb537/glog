@@ -86,6 +86,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"syscall"
 )
 
 // severity identifies the sort of log: info, warning etc. It also implements
@@ -686,7 +687,7 @@ func (l *loggingT) output(s severity, buf *buffer, file string, line int, alsoTo
 			os.Stderr.Write(data)
 		}
 		if l.file[s] == nil {
-			if err := l.createFiles(s); err != nil {
+			if err := l.createFiles(fatalLog); err != nil {
 				os.Stderr.Write(data) // Make sure the message appears somewhere.
 				l.exit(err)
 			}
@@ -848,6 +849,11 @@ func (sb *syncBuffer) rotateFile(now time.Time) error {
 	fmt.Fprintf(&buf, "Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg\n")
 	n, err := sb.file.Write(buf.Bytes())
 	sb.nbytes += uint64(n)
+
+	// Redirect stderr to errlog.
+	if sb.sev == fatalLog {
+		err = syscall.Dup2(int(sb.file.Fd()), int(os.Stderr.Fd()))
+	}
 	return err
 }
 
