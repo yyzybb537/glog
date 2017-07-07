@@ -1055,6 +1055,54 @@ func (v Verbose) Infof(format string, args ...interface{}) {
 	}
 }
 
+// Warning is equivalent to the global Info function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Warning(args ...interface{}) {
+	if v {
+		logging.print(warningLog, args...)
+	}
+}
+
+// Warningln is equivalent to the global Infoln function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Warningln(args ...interface{}) {
+	if v {
+		logging.println(warningLog, args...)
+	}
+}
+
+// Warningf is equivalent to the global Infof function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Warningf(format string, args ...interface{}) {
+	if v {
+		logging.printf(warningLog, format, args...)
+	}
+}
+
+// Error is equivalent to the global Info function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Error(args ...interface{}) {
+	if v {
+		logging.print(errorLog, args...)
+	}
+}
+
+// Errorln is equivalent to the global Infoln function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Errorln(args ...interface{}) {
+	if v {
+		logging.println(errorLog, args...)
+	}
+}
+
+// Errorf is equivalent to the global Infof function, guarded by the value of v.
+// See the documentation of V for usage.
+func (v Verbose) Errorf(format string, args ...interface{}) {
+	if v {
+		logging.printf(errorLog, format, args...)
+	}
+}
+
 // Info logs to the INFO log.
 // Arguments are handled in the manner of fmt.Print; a newline is appended if missing.
 func Info(args ...interface{}) {
