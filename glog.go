@@ -87,6 +87,7 @@ import (
 	"sync/atomic"
 	"time"
 	"syscall"
+	"github.com/yyzybb537/gls"
 )
 
 // severity identifies the sort of log: info, warning etc. It also implements
@@ -575,7 +576,7 @@ func (l *loggingT) formatHeader(s severity, file string, line int) *buffer {
 	buf.tmp[14] = '.'
 	buf.nDigits(6, 15, now.Nanosecond()/1000, '0')
 	buf.tmp[21] = ' '
-	buf.nDigits(7, 22, pid, ' ') // TODO: should be TID
+	buf.nDigits(7, 22, int(gls.Goid()), ' ') // TODO: should be TID
 	buf.tmp[29] = ' '
 	buf.Write(buf.tmp[:30])
 	buf.WriteString(file)
