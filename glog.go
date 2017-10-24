@@ -88,6 +88,7 @@ import (
 	"time"
 	"syscall"
 	"github.com/yyzybb537/gls"
+	"io/ioutil"
 )
 
 // severity identifies the sort of log: info, warning etc. It also implements
@@ -484,6 +485,55 @@ func (l *loggingT) setVState(verbosity Level, filter []modulePat, setFilter bool
 	// They are enabled in order opposite to that in V.
 	atomic.StoreInt32(&logging.filterLength, int32(len(filter)))
 	logging.verbosity.set(verbosity)
+}
+
+func CheckLogDirAndDeleteBiggestFile() (string, error){
+	onceLogDirs.Do(createLogDirs)
+	if len(logDirs) == 0 {
+		return "", errors.New("log: no log dirs")
+	}
+	var maxSize int64 
+	var maxFilename string
+	maxSize = -1
+	var filename string
+	var holdFilenames []string
+	var dir	string
+	for i, holdFile := range logging.file {
+		if holdFile != nil && holdFile.(*syncBuffer).file != nil {
+			if i == 0 {
+				dir = filepath.Dir(holdFile.(*syncBuffer).file.Name())
+			}
+			holdFilenames = append(holdFilenames, holdFile.(*syncBuffer).file.Name())
+		}
+	}
+	if dir == "" {
+		return "", errors.New("log: no log dirs")
+    }
+	files, _ := ioutil.ReadDir(dir)
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+        }
+		if int64(f.Size()) > maxSize {
+			var holdCheck bool
+			realFilename := filepath.Join(dir, f.Name())
+			for _, holdFilename := range holdFilenames {
+				if holdFilename == realFilename {
+					holdCheck = true
+                }
+            }
+			if !holdCheck {
+				maxSize = f.Size()
+				maxFilename = realFilename
+            }
+		}
+    }
+	os.Remove(maxFilename)
+	filename = maxFilename
+	if filename == "" {
+		return "", fmt.Errorf("Every file is holded by program")
+	}
+	return filename, nil	
 }
 
 // getBuffer returns a new, ready-to-use buffer.
