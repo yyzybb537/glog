@@ -487,15 +487,15 @@ func (l *loggingT) setVState(verbosity Level, filter []modulePat, setFilter bool
 	logging.verbosity.set(verbosity)
 }
 
-func CheckLogDirAndDeleteBiggestFile() (string, error){
+func CheckLogDirAndDeleteBiggestFile() ([]string, error){
 	onceLogDirs.Do(createLogDirs)
 	if len(logDirs) == 0 {
-		return "", errors.New("log: no log dirs")
+		return nil, errors.New("log: no log dirs")
 	}
 	var maxSize int64 
 	var maxFilename string
 	maxSize = -1
-	var filename string
+	var filenames []string
 	var holdFilenames []string
 	var dir	string
 	for i, holdFile := range logging.file {
@@ -507,11 +507,31 @@ func CheckLogDirAndDeleteBiggestFile() (string, error){
 		}
 	}
 	if dir == "" {
-		return "", errors.New("log: no log dirs")
+		return nil, errors.New("log: no log dirs")
     }
+	t := time.Now()
 	files, _ := ioutil.ReadDir(dir)
 	for _, f := range files {
-		if f.IsDir() {
+		if f.IsDir() || f.Mode()&os.ModeSymlink != 0{
+			continue
+        }
+		if t.Sub(f.ModTime()) > 72 * time.Hour {
+			var holdCheck bool
+			realFilename := filepath.Join(dir, f.Name())
+			for _, holdFilename := range holdFilenames {
+				if holdFilename == realFilename {
+					holdCheck = true
+                }
+            }
+			if !holdCheck {
+				os.Remove(realFilename)
+				filenames = append(filenames, realFilename)
+            }
+		}
+    }
+	files, _ = ioutil.ReadDir(dir)
+	for _, f := range files {
+		if f.IsDir() || f.Mode()&os.ModeSymlink != 0 {
 			continue
         }
 		if int64(f.Size()) > maxSize {
@@ -528,12 +548,14 @@ func CheckLogDirAndDeleteBiggestFile() (string, error){
             }
 		}
     }
-	os.Remove(maxFilename)
-	filename = maxFilename
-	if filename == "" {
-		return "", fmt.Errorf("Every file is holded by program")
+	if maxFilename != "" {
+		os.Remove(maxFilename)
+		filenames = append(filenames, maxFilename)
+    }
+	if filenames == nil {
+		return nil, fmt.Errorf("Every file is holded by program")
 	}
-	return filename, nil	
+	return filenames, nil	
 }
 
 // getBuffer returns a new, ready-to-use buffer.
