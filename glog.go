@@ -741,6 +741,14 @@ func (l *loggingT) printWithFileLine(s severity, file string, line int, alsoToSt
 	l.output(s, buf, file, line, alsoToStderr)
 }
 
+func writeToStderr(data []byte) {
+	if ppid == 1 {
+		return ;
+	}
+
+	os.Stderr.Write(data)
+}
+
 // output writes the data to the log files and releases the buffer.
 func (l *loggingT) output(s severity, buf *buffer, file string, line int, alsoToStderr bool) {
 	l.mu.Lock()
@@ -754,14 +762,14 @@ func (l *loggingT) output(s severity, buf *buffer, file string, line int, alsoTo
 		os.Stderr.Write([]byte("ERROR: logging before flag.Parse: "))
 		os.Stderr.Write(data)
 	} else if l.toStderr {
-		os.Stderr.Write(data)
+		writeToStderr(data)
 	} else {
 		if alsoToStderr || l.alsoToStderr || s >= l.stderrThreshold.get() {
-			os.Stderr.Write(data)
+			writeToStderr(data)
 		}
 		if l.file[s] == nil {
 			if err := l.createFiles(fatalLog); err != nil {
-				os.Stderr.Write(data) // Make sure the message appears somewhere.
+				writeToStderr(data) // Make sure the message appears somewhere.
 				l.exit(err)
 			}
 		}
