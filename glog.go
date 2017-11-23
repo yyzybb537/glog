@@ -492,9 +492,8 @@ func CheckLogDirAndDeleteBiggestFile() ([]string, error){
 	if len(logDirs) == 0 {
 		return nil, errors.New("log: no log dirs")
 	}
-	var maxSize int64 
-	var maxFilename string
-	maxSize = -1
+	var oldestTime time.Time
+	var oldestFilename string
 	var filenames []string
 	var holdFilenames []string
 	var dir	string
@@ -509,32 +508,13 @@ func CheckLogDirAndDeleteBiggestFile() ([]string, error){
 	if dir == "" {
 		return nil, errors.New("log: no log dirs")
     }
-	t := time.Now()
+	//删除最老的文件
 	files, _ := ioutil.ReadDir(dir)
-	for _, f := range files {
-		if f.IsDir() || f.Mode()&os.ModeSymlink != 0{
-			continue
-        }
-		if t.Sub(f.ModTime()) > 72 * time.Hour {
-			var holdCheck bool
-			realFilename := filepath.Join(dir, f.Name())
-			for _, holdFilename := range holdFilenames {
-				if holdFilename == realFilename {
-					holdCheck = true
-                }
-            }
-			if !holdCheck {
-				os.Remove(realFilename)
-				filenames = append(filenames, realFilename)
-            }
-		}
-    }
-	files, _ = ioutil.ReadDir(dir)
 	for _, f := range files {
 		if f.IsDir() || f.Mode()&os.ModeSymlink != 0 {
 			continue
         }
-		if int64(f.Size()) > maxSize {
+		if oldestTime.IsZero() || f.ModTime().Sub(oldestTime) < 0{
 			var holdCheck bool
 			realFilename := filepath.Join(dir, f.Name())
 			for _, holdFilename := range holdFilenames {
@@ -543,14 +523,14 @@ func CheckLogDirAndDeleteBiggestFile() ([]string, error){
                 }
             }
 			if !holdCheck {
-				maxSize = f.Size()
-				maxFilename = realFilename
+				oldestTime = f.ModTime()
+				oldestFilename = realFilename
             }
 		}
     }
-	if maxFilename != "" {
-		os.Remove(maxFilename)
-		filenames = append(filenames, maxFilename)
+	if oldestFilename != "" {
+		os.Remove(oldestFilename)
+		filenames = append(filenames, oldestFilename)
     }
 	if filenames == nil {
 		return nil, fmt.Errorf("Every file is holded by program")
